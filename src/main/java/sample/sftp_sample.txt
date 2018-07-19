@@ -1,0 +1,84 @@
+
+http://www.mysamplecode.com/2013/06/sftp-apache-commons-file-download.html
+
+
+
+
+private static final Logger logger = Logger.getLogger(YourClass.class.getName());
+
+public boolean sendDataViaSFTP(String contents) throws Exception {
+    String hostname = "<FTP hostname/IP>";
+    String username = "<FTP username>";
+    String password = "<FTP password>";
+    String remoteDirectory = "<FTP remote directory>";
+    int ftpPort = 22;
+
+    logger.info("***   Creating FTP session.   ***");
+    JSch jsch = new JSch();
+    Session session = null;
+    Channel channel = null;
+    ChannelSftp c = null;
+
+    //Now connect and SFTP to the SFTP Server
+    try {
+        //Create a session sending through our username and password
+        session = jsch.getSession(username, hostname, ftpPort);
+        logger.info("***   FTP Session created.   ***");
+        session.setPassword(password);
+
+        //Security.addProvider(new com.sun.crypto.provider.SunJCE());
+        //Setup Strict HostKeyChecking to no so we dont get the
+        //unknown host key exception
+        Properties config = new Properties();
+        config.put("StrictHostKeyChecking", "no");
+        session.setConfig(config);
+        session.connect();
+        logger.info("***   Session connected.   ***");
+
+        //Open the SFTP channel
+        logger.info("***   Opening FTP Channel.   ***");
+        channel = session.openChannel("sftp");
+        channel.connect();
+        c = (ChannelSftp) channel;
+
+        //Change to the remote directory
+        logger.info("***   Changing to FTP remote dir: " + remoteDirectory + "   ***");
+        c.cd(remoteDirectory);
+
+        //Send the file we generated
+        try {
+            String filename = "myfile.txt";
+
+            logger.info("***   Storing file as remote filename: " + filename + "   ***");
+
+            ByteArrayInputStream bis = new ByteArrayInputStream(contents.getBytes());
+            c.put(bis, filename);
+            return true;
+        } catch (Exception e) {
+            logger.info("***   Storing remote file failed. " + e.toString() + "   ***");
+            throw e;
+        }
+    } catch (Exception e) {
+        logger.info("***   Unable to connect to FTP server. " + e.toString() + "   ***");
+        throw e;
+    } finally {
+        //
+        //Disconnect from the FTP server
+        //
+        try {
+            if(session != null)
+                session.disconnect();
+
+            if(channel != null)
+                channel.disconnect();
+
+            if(c != null)
+                c.quit();
+        } catch (Exception exc) {
+            logger.severe("***   Unable to disconnect from FTP server. " + exc.toString()+"   ***");
+        }
+
+        logger.info("***   SFTP Process Complete.   ***");
+    }
+
+}
